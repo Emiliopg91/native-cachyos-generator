@@ -1,0 +1,20 @@
+{
+  "linux-cachyos": {
+    "_cpusched": "bore",
+    "_use_llvm_lto": "full",
+    "_processor_opt": "native",
+    "_use_lto_suffix": "no",
+    "_per_gov": "yes",
+    "_tcp_bbr3": "yes",
+    "_build_nvidia_open": "yes"
+  },
+  "linux-cachyos-rc": {
+    "_cpusched": "bore",
+    "_use_llvm_lto": "full",
+    "_processor_opt": "native",
+    "_use_lto_suffix": "no",
+    "_per_gov": "yes",
+    "_tcp_bbr3": "yes",
+    "_build_nvidia_open": "yes"
+  }
+}
