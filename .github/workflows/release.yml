@@ -40,17 +40,8 @@ jobs:
             echo "has_items=false" >> $GITHUB_OUTPUT
           fi
 
-  build-images:
-    needs: generate-matrix
-    if: needs.generate-matrix.outputs.has_items == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build images
-        run: ./main.py --build-images
-
   handle-kernel:
-    needs: [generate-matrix, build-images]
+    needs: [generate-matrix]
     if: needs.generate-matrix.outputs.has_items == 'true'
     runs-on: ubuntu-latest
     strategy:
