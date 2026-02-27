@@ -290,12 +290,12 @@ if __name__ == "__main__":
         subprocess.run(["chmod", "-R", "777", CWD], check=True)
 
         kernel = sys.argv[1]
-        updated_kernel = __get_kernel(kernel)
+        version = __get_kernel(kernel)
 
-        if updated_kernel is None:
+        if version is None:
             sys.exit(0)
 
         __build_containers()
 
-        __prepare_workspace(updated_kernel)
-        __handle_kernel(kernel, updated_kernel)
+        __prepare_workspace(kernel)
+        __handle_kernel(kernel, version)
