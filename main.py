@@ -14,11 +14,18 @@ import sys
 import hashlib
 
 CWD = os.getcwd()
-print(f"Current working directory {CWD}")
-WORKSPACE = os.path.join(CWD, "workspace")
 
 with open(os.path.join(CWD, "config.json"), "r", encoding="utf-8") as f:
     KERNELS_CONFIG: dict[str, dict[str, str]] = json.load(f)
+
+
+def __get_matrix():
+    matrix = {"include": [{"kernel": kernel} for kernel in KERNELS_CONFIG.keys()]}
+
+    print(json.dumps(matrix))
+
+
+WORKSPACE = os.path.join(CWD, "workspace")
 
 
 def __get_kernels():
@@ -278,17 +285,20 @@ def __handle_kernel(kernel_name: str, version: str):
 
 
 if __name__ == "__main__":
-    subprocess.run(["chmod", "-R", "777", CWD], check=True)
+    if "--matrix" in sys.argv:
+        __get_matrix()
+    else:
+        subprocess.run(["chmod", "-R", "777", CWD], check=True)
 
-    updated_kernels = __get_kernels()
+        updated_kernels = __get_kernels()
 
-    if len(updated_kernels) == 0:
-        print("No kernels to update")
-        sys.exit(0)
+        if len(updated_kernels) == 0:
+            print("No kernels to update")
+            sys.exit(0)
 
-    __build_containers()
+        __build_containers()
 
-    __prepare_workspace(updated_kernels)
+        __prepare_workspace(updated_kernels)
 
-    for kernel_name in updated_kernels:
-        __handle_kernel(kernel_name, updated_kernels[kernel_name])
+        for kernel_name in updated_kernels:
+            __handle_kernel(kernel_name, updated_kernels[kernel_name])
