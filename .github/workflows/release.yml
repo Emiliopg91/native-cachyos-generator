@@ -28,4 +28,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: |
-          ./main.py ${{ matrix.kernel }}
+          PYTHONUNBUFFERED=1 ./main.py ${{ matrix.kernel }}
