@@ -297,16 +297,13 @@ if __name__ == "__main__":
 
     if "--matrix" in sys.argv:
         __get_matrix()
+    elif "--build-images" in sys.argv:
+        __build_containers()
     else:
         subprocess.run(["chmod", "-R", "777", CWD], check=True)
         print(f"Handling update {sys.argv[1]}")
         kernel = sys.argv[1]
         version = sys.argv[2]
-
-        if version is None:
-            sys.exit(0)
-
-        __build_containers()
 
         __prepare_workspace(kernel)
         __handle_kernel(kernel, version)
