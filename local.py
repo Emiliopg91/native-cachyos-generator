@@ -3,6 +3,7 @@
 # pylint: disable=broad-exception-caught,invalid-name, line-too-long, bare-except
 import sys
 import os
+import json
 import subprocess
 
 if __name__ == "__main__":
@@ -21,4 +22,18 @@ if __name__ == "__main__":
     subprocess.run(["chmod", "-R", "777", "."], check=True)
 
     command = os.path.join(os.path.dirname(__file__), "main.py")
-    os.execvp("sudo", ["sudo", "-u", os.environ["SUDO_USER"], command] + sys.argv)
+
+    matrix = json.loads(
+        subprocess.run(
+            ["sudo", "-u", os.environ["SUDO_USER"], command, "--matrix"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+
+    for entry in matrix["include"]:
+        subprocess.run(
+            ["sudo", "-u", os.environ["SUDO_USER"], command, entry["kernel"]],
+            check=True,
+        )
