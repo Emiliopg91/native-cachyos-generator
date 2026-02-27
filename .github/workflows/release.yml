@@ -30,4 +30,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          echo "Setting SSH key for AUR..."
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          echo -e "Host aur.archlinux.org\n\tIdentityFile ~/.ssh/aur\n\tUser aur\n\tStrictHostKeyChecking no" >> ~/.ssh/config
+
           PYTHONUNBUFFERED=1 ./main.py ${{ matrix.kernel }} ${{ matrix.version }}
