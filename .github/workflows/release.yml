@@ -19,7 +19,7 @@ jobs:
           MATRIX=$(./main.py --matrix)
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
-  build:
+  handle-kernel:
     needs: generate-matrix
     runs-on: ubuntu-latest
     strategy:
