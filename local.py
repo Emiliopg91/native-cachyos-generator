@@ -23,12 +23,16 @@ if __name__ == "__main__":
 
     command = os.path.join(os.path.dirname(__file__), "main.py")
 
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+
     matrix = json.loads(
         subprocess.run(
             ["sudo", "-u", os.environ["SUDO_USER"], command, "--matrix"],
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         ).stdout
     )
 
@@ -36,4 +40,5 @@ if __name__ == "__main__":
         subprocess.run(
             ["sudo", "-u", os.environ["SUDO_USER"], command, entry["kernel"]],
             check=True,
+            env=env,
         )

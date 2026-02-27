@@ -19,124 +19,129 @@ with open(os.path.join(CWD, "config.json"), "r", encoding="utf-8") as f:
     KERNELS_CONFIG: dict[str, dict[str, str]] = json.load(f)
 
 
-def __get_matrix():
-    matrix = {"include": [{"kernel": kernel} for kernel in KERNELS_CONFIG.keys()]}
-
-    print(json.dumps(matrix))
-
-
 WORKSPACE = os.path.join(CWD, "workspace")
 
 
-def __get_kernel(kernel):
-    force = "--force" in sys.argv
-    original_vers = native_vers = "0.0.0-1"
-    original_pkgvers = native_pkgvers = "0.0.0"
-    original_pkgrel = native_pkgrel = "1"
+def __get_kernels():
+    result = []
+    for kernel in KERNELS_CONFIG:
+        force = "--force" in sys.argv
+        original_vers = native_vers = "0.0.0-1"
+        original_pkgvers = native_pkgvers = "0.0.0"
+        original_pkgrel = native_pkgrel = "1"
 
-    print(f"Looking for {kernel} updates...")
-    print("  Getting current versions...")
-    with request.urlopen(
-        f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}"
-    ) as response:
-        data = response.read()
-        data = json.loads(data.decode("utf-8"))
-        original_vers = data["results"][0]["Version"]
-        original_upd = data["results"][0]["LastModified"]
-        original_pkgvers, original_pkgrel = original_vers.split("-")
-        print(
-            f"    - Original: {original_vers} ({datetime.fromtimestamp(original_upd).strftime("%a %b %d %H:%M:%S %Y")})"
-        )
-
-    with request.urlopen(
-        f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}-native"
-    ) as response:
-        data = response.read()
-        data = json.loads(data.decode("utf-8"))
-        if len(data["results"]) == 0:
-            print("    - Native package not available")
-        else:
-            native_vers = data["results"][0]["Version"]
-            native_upd = data["results"][0]["LastModified"]
-            native_pkgvers, native_pkgrel = native_vers.split("-")
-            print(
-                f"    - Native:   {native_vers} ({datetime.fromtimestamp(native_upd).strftime("%a %b %d %H:%M:%S %Y")})"
-            )
-
-    if KERNELS_CONFIG[kernel]["check_src"]:
-        print("  Checking source files...")
-        changed_deps = False
+        print(f"Looking for {kernel} updates...", file=sys.stderr)
+        print("  Getting current versions...", file=sys.stderr)
         with request.urlopen(
-            f"https://aur.archlinux.org/cgit/aur.git/plain/.SRCINFO?h={kernel}-native"
+            f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}"
         ) as response:
-            sources = []
-            b2sums = []
-            skipped = []
-
-            data = response.read().decode("utf-8").splitlines()
-            idx = 0
-            for line in data:
-                line = line.strip()
-                if line.startswith("source = "):
-                    if line.endswith(".tar.xz") or line.endswith(".tar.gz"):
-                        skipped.append(idx)
-                    else:
-                        sources.append(line.split(" = ")[1])
-                    idx = idx + 1
-
-            idx = 0
-            for line in data:
-                line = line.strip()
-                if line.startswith("b2sums = "):
-                    if idx in skipped:
-                        skipped.append(idx)
-                    else:
-                        b2sums.append(line.split(" = ")[1])
-                    idx = idx + 1
-
-        for i in range(len(sources)):
-            url = (
-                sources[i]
-                if sources[i].startswith("https://")
-                else f"https://aur.archlinux.org/cgit/aur.git/plain/{sources[i]}?h={kernel}-native"
+            data = response.read()
+            data = json.loads(data.decode("utf-8"))
+            original_vers = data["results"][0]["Version"]
+            original_upd = data["results"][0]["LastModified"]
+            original_pkgvers, original_pkgrel = original_vers.split("-")
+            print(
+                f"    - Original: {original_vers} ({datetime.fromtimestamp(original_upd).strftime("%a %b %d %H:%M:%S %Y")})",
+                file=sys.stderr,
             )
 
-            h = hashlib.blake2b()  # equivalente a b2sum
-            with request.urlopen(url) as response:
-                while True:
-                    chunk = response.read(8192)
-                    if not chunk:
-                        break
-                    h.update(chunk)
-            calculated = h.hexdigest()
-            if calculated != b2sums[i]:
-                print("    Source files changed")
-                changed_deps = True
-                break
+        with request.urlopen(
+            f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}-native"
+        ) as response:
+            data = response.read()
+            data = json.loads(data.decode("utf-8"))
+            if len(data["results"]) == 0:
+                print("    - Native package not available", file=sys.stderr)
+            else:
+                native_vers = data["results"][0]["Version"]
+                native_upd = data["results"][0]["LastModified"]
+                native_pkgvers, native_pkgrel = native_vers.split("-")
+                print(
+                    f"    - Native:   {native_vers} ({datetime.fromtimestamp(native_upd).strftime("%a %b %d %H:%M:%S %Y")})",
+                    file=sys.stderr,
+                )
 
-    if original_pkgvers != native_pkgvers:
-        print(f"  Update available -> {original_vers}")
-        return original_vers
-    elif float(original_pkgrel) > float(native_pkgrel):
-        print(f"  Update available -> {original_vers}")
-        return original_vers
-    elif changed_deps or native_upd < original_upd or force:
-        pkgrel = native_vers.split("-")[1]
-        if "." in pkgrel:
-            [major, minor] = pkgrel.split(".")
-            minor = str(int(minor) + 1)
-            pkgrel = f"{major}.{minor}"
+        if KERNELS_CONFIG[kernel]["check_src"]:
+            print("  Checking source files...", file=sys.stderr)
+            changed_deps = False
+            with request.urlopen(
+                f"https://aur.archlinux.org/cgit/aur.git/plain/.SRCINFO?h={kernel}-native"
+            ) as response:
+                sources = []
+                b2sums = []
+                skipped = []
+
+                data = response.read().decode("utf-8").splitlines()
+                idx = 0
+                for line in data:
+                    line = line.strip()
+                    if line.startswith("source = "):
+                        if line.endswith(".tar.xz") or line.endswith(".tar.gz"):
+                            skipped.append(idx)
+                        else:
+                            sources.append(line.split(" = ")[1])
+                        idx = idx + 1
+
+                idx = 0
+                for line in data:
+                    line = line.strip()
+                    if line.startswith("b2sums = "):
+                        if idx in skipped:
+                            skipped.append(idx)
+                        else:
+                            b2sums.append(line.split(" = ")[1])
+                        idx = idx + 1
+
+            for i in range(len(sources)):
+                url = (
+                    sources[i]
+                    if sources[i].startswith("https://")
+                    else f"https://aur.archlinux.org/cgit/aur.git/plain/{sources[i]}?h={kernel}-native"
+                )
+
+                h = hashlib.blake2b()  # equivalente a b2sum
+                with request.urlopen(url) as response:
+                    while True:
+                        chunk = response.read(8192)
+                        if not chunk:
+                            break
+                        h.update(chunk)
+                calculated = h.hexdigest()
+                if calculated != b2sums[i]:
+                    print("    Source files changed", file=sys.stderr)
+                    changed_deps = True
+                    break
+
+        if original_pkgvers != native_pkgvers:
+            print(f"  Update available -> {original_vers}", file=sys.stderr)
+            result.append(f"{kernel} -> {original_vers}")
+        elif float(original_pkgrel) > float(native_pkgrel):
+            print(f"  Update available -> {original_vers}", file=sys.stderr)
+            result.append(f"{kernel} -> {original_vers}")
+        elif changed_deps or native_upd < original_upd or force:
+            pkgrel = native_vers.split("-")[1]
+            if "." in pkgrel:
+                [major, minor] = pkgrel.split(".")
+                minor = str(int(minor) + 1)
+                pkgrel = f"{major}.{minor}"
+            else:
+                pkgrel = pkgrel + ".1"
+            vers = native_vers.split("-")[0] + "-" + pkgrel
+            if force:
+                print(f"  Update forced -> {vers}", file=sys.stderr)
+            else:
+                print(f"  Update available -> {vers}", file=sys.stderr)
+            result.append(f"{kernel} -> {vers}")
         else:
-            pkgrel = pkgrel + ".1"
-        vers = native_vers.split("-")[0] + "-" + pkgrel
-        if force:
-            print(f"  Update forced -> {vers}")
-        else:
-            print(f"  Update available -> {vers}")
-        return vers
-    else:
-        print("Up to date")
-        return None
+            print("Up to date", file=sys.stderr)
+
+    return result
+
+
+def __get_matrix():
+    matrix = {"include": [{"kernel": kernel} for kernel in __get_kernels()]}
+
+    print(json.dumps(matrix))
 
 
 def __prepare_workspace(kernel):
@@ -289,8 +294,7 @@ if __name__ == "__main__":
     else:
         subprocess.run(["chmod", "-R", "777", CWD], check=True)
 
-        kernel = sys.argv[1]
-        version = __get_kernel(kernel)
+        kernel, version = sys.argv[1].split(" -> ")
 
         if version is None:
             sys.exit(0)

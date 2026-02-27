@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  compile_and_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Configure Git user
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          echo "Setting SSH key for AUR..."
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          echo -e "Host aur.archlinux.org\n\tIdentityFile ~/.ssh/aur\n\tUser aur\n\tStrictHostKeyChecking no" >> ~/.ssh/config
+
+      - name: Process
+        run: |
+          python3 main.py
