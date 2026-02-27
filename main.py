@@ -114,10 +114,10 @@ def __get_kernels():
 
         if original_pkgvers != native_pkgvers:
             print(f"  Update available -> {original_vers}", file=sys.stderr)
-            result.append(f"{kernel} -> {original_vers}")
+            result.append((kernel, original_vers))
         elif float(original_pkgrel) > float(native_pkgrel):
             print(f"  Update available -> {original_vers}", file=sys.stderr)
-            result.append(f"{kernel} -> {original_vers}")
+            result.append((kernel, original_vers))
         elif changed_deps or native_upd < original_upd or force:
             pkgrel = native_vers.split("-")[1]
             if "." in pkgrel:
@@ -131,7 +131,7 @@ def __get_kernels():
                 print(f"  Update forced -> {vers}", file=sys.stderr)
             else:
                 print(f"  Update available -> {vers}", file=sys.stderr)
-            result.append(f"{kernel} -> {vers}")
+            result.append((kernel, vers))
         else:
             print("Up to date", file=sys.stderr)
 
@@ -139,9 +139,15 @@ def __get_kernels():
 
 
 def __get_matrix():
-    matrix = {"include": [{"kernel": kernel} for kernel in __get_kernels()]}
+    matrix = {
+        "include": [
+            {"kernel": kernel, "version": version}
+            for kernel, version in __get_kernels()
+        ]
+    }
 
     print(json.dumps(matrix))
+    print(json.dumps(matrix), file=sys.stderr)
 
 
 def __prepare_workspace(kernel):
@@ -293,8 +299,9 @@ if __name__ == "__main__":
         __get_matrix()
     else:
         subprocess.run(["chmod", "-R", "777", CWD], check=True)
-
-        kernel, version = sys.argv[1].split(" -> ")
+        print(f"Handling update {sys.argv[1]}")
+        kernel = sys.argv[1]
+        version = sys.argv[2]
 
         if version is None:
             sys.exit(0)

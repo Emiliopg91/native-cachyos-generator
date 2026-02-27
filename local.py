@@ -35,10 +35,18 @@ if __name__ == "__main__":
             env=env,
         ).stdout
     )
+    print(f"{matrix}")
 
     for entry in matrix["include"]:
         subprocess.run(
-            ["sudo", "-u", os.environ["SUDO_USER"], command, entry["kernel"]],
+            [
+                "sudo",
+                "-u",
+                os.environ["SUDO_USER"],
+                command,
+                entry["kernel"],
+                entry["version"],
+            ],
             check=True,
             env=env,
         )
