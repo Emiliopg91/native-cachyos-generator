@@ -27,4 +27,5 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Kernel ${{ matrix.kernel }}"
+      - run: |
+          ./main.py ${{ matrix.kernel }}
