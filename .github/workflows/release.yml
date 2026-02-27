@@ -6,28 +6,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  compile_and_release:
+  generate-matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Configure Git user
-        env:
-          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+      - name: Generate matrix
+        id: set-matrix
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          MATRIX=$(./main.py --matrix)
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
-          echo "Setting SSH key for AUR..."
-          mkdir -p ~/.ssh
-          echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-          echo -e "Host aur.archlinux.org\n\tIdentityFile ~/.ssh/aur\n\tUser aur\n\tStrictHostKeyChecking no" >> ~/.ssh/config
+  build:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
 
-      - name: Process
-        run: |
-          python3 main.py
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Kernel ${{ matrix.kernel }}"
