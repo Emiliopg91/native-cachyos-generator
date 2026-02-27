@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import hashlib
 
 CWD = os.getcwd()
 print(f"Current working directory {CWD}")
@@ -58,13 +59,64 @@ def __get_kernels():
                     f"      - Native:   {native_vers} ({datetime.fromtimestamp(native_upd).strftime("%a %b %d %H:%M:%S %Y")})"
                 )
 
+        if KERNELS_CONFIG[kernel]["check_src"]:
+            print("    Checking source files...")
+            changed_deps = False
+            with request.urlopen(
+                f"https://aur.archlinux.org/cgit/aur.git/plain/.SRCINFO?h={kernel}-native"
+            ) as response:
+                sources = []
+                b2sums = []
+                skipped = []
+
+                data = response.read().decode("utf-8").splitlines()
+                idx = 0
+                for line in data:
+                    line = line.strip()
+                    if line.startswith("source = "):
+                        if line.endswith(".tar.xz") or line.endswith(".tar.gz"):
+                            skipped.append(idx)
+                        else:
+                            sources.append(line.split(" = ")[1])
+                        idx = idx + 1
+
+                idx = 0
+                for line in data:
+                    line = line.strip()
+                    if line.startswith("b2sums = "):
+                        if idx in skipped:
+                            skipped.append(idx)
+                        else:
+                            b2sums.append(line.split(" = ")[1])
+                        idx = idx + 1
+
+            for i in range(len(sources)):
+                url = (
+                    sources[i]
+                    if sources[i].startswith("https://")
+                    else f"https://aur.archlinux.org/cgit/aur.git/plain/{sources[i]}?h={kernel}-native"
+                )
+
+                h = hashlib.blake2b()  # equivalente a b2sum
+                with request.urlopen(url) as response:
+                    while True:
+                        chunk = response.read(8192)
+                        if not chunk:
+                            break
+                        h.update(chunk)
+                calculated = h.hexdigest()
+                if calculated != b2sums[i]:
+                    print("      Source files changed")
+                    changed_deps = True
+                    break
+
         if original_pkgvers != native_pkgvers:
             print(f"    Update available -> {original_vers}")
             result[kernel] = original_vers
         elif float(original_pkgrel) > float(native_pkgrel):
             print(f"    Update available -> {original_vers}")
             result[kernel] = original_vers
-        elif native_upd < original_upd or force:
+        elif changed_deps or native_upd < original_upd or force:
             pkgrel = native_vers.split("-")[1]
             if "." in pkgrel:
                 [major, minor] = pkgrel.split(".")
@@ -141,7 +193,7 @@ def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
         'pkgbase="linux-$_pkgsuffix"', f'pkgbase="{new_kernel}"'
     )
 
-    for parameter, value in KERNELS_CONFIG[kernel_name].items():
+    for parameter, value in KERNELS_CONFIG[kernel_name]["properties"].items():
         pkgbuild_content = re.sub(
             rf'"\$\{{{re.escape(parameter)}:=[^}}]*\}}"',
             f'"${{{parameter}:={value}}}"',
