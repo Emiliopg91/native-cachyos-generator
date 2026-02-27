@@ -29,8 +29,6 @@ WORKSPACE = os.path.join(CWD, "workspace")
 
 
 def __get_kernel(kernel):
-    print("Checking kernels to update...")
-
     force = "--force" in sys.argv
     original_vers = native_vers = "0.0.0-1"
     original_pkgvers = native_pkgvers = "0.0.0"
@@ -294,7 +292,6 @@ if __name__ == "__main__":
         updated_kernel = __get_kernel(kernel)
 
         if updated_kernel is None:
-            print("No kernels to update")
             sys.exit(0)
 
         __build_containers()
