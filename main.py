@@ -35,6 +35,7 @@ def __get_kernel(kernel):
     original_pkgrel = native_pkgrel = "1"
 
     print(f"Looking for {kernel} updates...")
+    print("  Getting current versions...")
     with request.urlopen(
         f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}"
     ) as response:
