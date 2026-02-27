@@ -34,7 +34,7 @@ def __get_kernel(kernel):
     original_pkgvers = native_pkgvers = "0.0.0"
     original_pkgrel = native_pkgrel = "1"
 
-    print(f"  Looking for {kernel} updates...")
+    print(f"Looking for {kernel} updates...")
     with request.urlopen(
         f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}"
     ) as response:
@@ -44,7 +44,7 @@ def __get_kernel(kernel):
         original_upd = data["results"][0]["LastModified"]
         original_pkgvers, original_pkgrel = original_vers.split("-")
         print(
-            f"      - Original: {original_vers} ({datetime.fromtimestamp(original_upd).strftime("%a %b %d %H:%M:%S %Y")})"
+            f"    - Original: {original_vers} ({datetime.fromtimestamp(original_upd).strftime("%a %b %d %H:%M:%S %Y")})"
         )
 
     with request.urlopen(
@@ -53,17 +53,17 @@ def __get_kernel(kernel):
         data = response.read()
         data = json.loads(data.decode("utf-8"))
         if len(data["results"]) == 0:
-            print("      - Native package not available")
+            print("    - Native package not available")
         else:
             native_vers = data["results"][0]["Version"]
             native_upd = data["results"][0]["LastModified"]
             native_pkgvers, native_pkgrel = native_vers.split("-")
             print(
-                f"      - Native:   {native_vers} ({datetime.fromtimestamp(native_upd).strftime("%a %b %d %H:%M:%S %Y")})"
+                f"    - Native:   {native_vers} ({datetime.fromtimestamp(native_upd).strftime("%a %b %d %H:%M:%S %Y")})"
             )
 
     if KERNELS_CONFIG[kernel]["check_src"]:
-        print("    Checking source files...")
+        print("  Checking source files...")
         changed_deps = False
         with request.urlopen(
             f"https://aur.archlinux.org/cgit/aur.git/plain/.SRCINFO?h={kernel}-native"
@@ -109,15 +109,15 @@ def __get_kernel(kernel):
                     h.update(chunk)
             calculated = h.hexdigest()
             if calculated != b2sums[i]:
-                print("      Source files changed")
+                print("    Source files changed")
                 changed_deps = True
                 break
 
     if original_pkgvers != native_pkgvers:
-        print(f"    Update available -> {original_vers}")
+        print(f"  Update available -> {original_vers}")
         return original_vers
     elif float(original_pkgrel) > float(native_pkgrel):
-        print(f"    Update available -> {original_vers}")
+        print(f"  Update available -> {original_vers}")
         return original_vers
     elif changed_deps or native_upd < original_upd or force:
         pkgrel = native_vers.split("-")[1]
@@ -129,12 +129,12 @@ def __get_kernel(kernel):
             pkgrel = pkgrel + ".1"
         vers = native_vers.split("-")[0] + "-" + pkgrel
         if force:
-            print(f"    Update forced -> {vers}")
+            print(f"  Update forced -> {vers}")
         else:
-            print(f"    Update available -> {vers}")
+            print(f"  Update available -> {vers}")
         return vers
     else:
-        print("    Up to date")
+        print("Up to date")
         return None
 
 
@@ -167,7 +167,7 @@ def __build_containers():
 
 
 def __edit_config_file(config):
-    print("  Editing config file...")
+    print("Editing config file...")
     with open(config, "r", encoding="utf-8") as f:
         config_content = f.read()
 
@@ -184,7 +184,7 @@ def __edit_config_file(config):
 
 
 def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
-    print("  Editing PKGBUILD file...")
+    print("Editing PKGBUILD file...")
     with open(pkgbuild, "r", encoding="utf-8") as f:
         pkgbuild_content = f.read()
 
@@ -219,7 +219,7 @@ def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
     with open(pkgbuild, "w", encoding="utf-8") as f:
         f.write(pkgbuild_content)
 
-    print("    Generating checksums...")
+    print("  Generating checksums...")
     subprocess.run(
         ["docker", "run", "--rm", "-v", f"{os.getcwd()}:/repo", "arch-sums"],
         check=True,
@@ -227,7 +227,7 @@ def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
 
 
 def __edit_srcinfo_file():
-    print("  Updating .SRCINFO file...")
+    print("Updating .SRCINFO file...")
     subprocess.run(
         ["docker", "run", "--rm", "-v", f"{os.getcwd()}:/repo", "arch-srcinfo"],
         check=True,
@@ -235,7 +235,7 @@ def __edit_srcinfo_file():
 
 
 def __generate_aur_release(kernel_name, version):
-    print("  Generating AUR release...")
+    print("Generating AUR release...")
     subprocess.run(
         [
             "git",
