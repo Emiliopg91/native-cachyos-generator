@@ -1,0 +1,57 @@
+name: Scheduler
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      force_matrix:
+        description: "Force update"
+        required: false
+        default: "false"
+
+jobs:
+  check-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate matrix
+        id: matrix
+        run: |
+          FORCE_ARG=""
+          if [ "${{ github.event.inputs.force_matrix }}" = "true" ]; then
+            FORCE_ARG="--force"
+          fi
+
+          MATRIX=$(./main.py --matrix $FORCE_ARG)
+
+          echo "Matrix generated:"
+          echo "$MATRIX"
+
+          COUNT=$(echo "$MATRIX" | jq '.include | length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "has_items=true" >> $GITHUB_OUTPUT
+            echo "matrix<<EOF" >> $GITHUB_OUTPUT
+            echo "$MATRIX" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "has_items=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Dispatch release workflow
+        if: steps.matrix.outputs.has_items == 'true'
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/release.yml/dispatches \
+            -d @- <<EOF
+          {
+            "ref": "${{ github.ref_name }}",
+            "inputs": {
+              "matrix": ${{ steps.matrix.outputs.matrix }}
+            }
+          }
+          EOF
