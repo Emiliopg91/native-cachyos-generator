@@ -1,6 +1,6 @@
 #!/bin/env python
 
-# pylint: disable=consider-using-dict-items, redefined-outer-name, line-too-long, consider-using-enumerate
+# pylint: disable=consider-using-dict-items, redefined-outer-name, line-too-long, consider-using-enumerate, broad-exception-caught, invalid-name
 
 
 from urllib import request
@@ -185,11 +185,23 @@ def __prepare_workspace(kernel):
 
     print("Downloading spec files...")
     tgz_path = os.path.join(WORKSPACE, f"{kernel}.tar.gz")
-    request.urlretrieve(
-        f"https://aur.archlinux.org/cgit/aur.git/snapshot/{kernel}.tar.gz", tgz_path
-    )
-    subprocess.run(["tar", "-xzf", tgz_path, "-C", WORKSPACE], check=True)
-    subprocess.run(["rm", "-rf", tgz_path], check=True)
+    try:
+        print("Trying to download from AUR...", file=sys.stderr)
+        request.urlretrieve(
+            f"https://aur.archlinux.org/cgit/aur.git/snapshot/{kernel}.tar.gz", tgz_path
+        )
+        subprocess.run(["tar", "-xzf", tgz_path, "-C", WORKSPACE], check=True)
+        subprocess.run(["rm", "-rf", tgz_path], check=True)
+    except Exception:
+        print("Trying to download from GIT...", file=sys.stderr)
+        DIR = os.path.join(WORKSPACE, kernel)
+        os.mkdir(DIR)
+
+        for file in ["PKGBUILD", ".SRCINFO", "config"]:
+            request.urlretrieve(
+                f"https://raw.githubusercontent.com/CachyOS/linux-cachyos/refs/heads/master/{kernel}/{file}",
+                os.path.join(DIR, file),
+            )
 
     subprocess.run(["chmod", "-R", "777", WORKSPACE], check=True)
 
