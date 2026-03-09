@@ -26,16 +26,24 @@ if __name__ == "__main__":
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
 
-    matrix = json.loads(
-        subprocess.run(
-            ["sudo", "-u", os.environ["SUDO_USER"], command, "--matrix"],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=env,
-        ).stdout
+    proc = subprocess.Popen(
+        ["sudo", "-u", os.environ["SUDO_USER"], command, "--matrix"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
     )
-    print(f"{matrix}")
+
+    stderr_lines = []
+
+    for line in proc.stderr:
+        print(line, end="")  # tiempo real
+        stderr_lines.append(line)
+
+    stdout = proc.stdout.read()
+    proc.wait()
+
+    matrix = json.loads(stdout)
 
     for entry in matrix["include"]:
         subprocess.run(
