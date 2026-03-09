@@ -180,11 +180,52 @@ def __prepare_workspace(kernel):
 def __build_containers():
     print("Preparing Docker images...")
     subprocess.run(
-        ["docker", "build", "--target", "srcinfo", "-t", "arch-srcinfo", "."],
+        [
+            "docker",
+            "build",
+            "--target",
+            "srcinfo",
+            "-t",
+            "epulidogil/arch-srcinfo:latest",
+            ".",
+        ],
         check=True,
     )
     subprocess.run(
-        ["docker", "build", "--target", "sums", "-t", "arch-sums", "."], check=True
+        [
+            "docker",
+            "build",
+            "--target",
+            "sums",
+            "-t",
+            "epulidogil/arch-sums:latest",
+            ".",
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            "docker",
+            "login",
+            "docker.io",
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            "docker",
+            "push",
+            "epulidogil/arch-srcinfo:latest",
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            "docker",
+            "push",
+            "epulidogil/arch-sums:latest",
+        ],
+        check=True,
     )
 
 
@@ -227,7 +268,6 @@ def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
     minor = version.split(".")[2].split("-")[0]
     pkgrel = ".".join(version.split(".")[2:]).split("-")[1]
 
-    print(f"{major} {minor} {pkgrel}")
     pkgbuild_lines = pkgbuild_content.splitlines()
     for i in range(len(pkgbuild_lines)):
         if pkgbuild_lines[i].startswith("_major"):
@@ -243,7 +283,14 @@ def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
 
     print("  Generating checksums...")
     subprocess.run(
-        ["docker", "run", "--rm", "-v", f"{os.getcwd()}:/repo", "arch-sums"],
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{os.getcwd()}:/repo",
+            "epulidogil/arch-sums:latest",
+        ],
         check=True,
     )
 
@@ -251,7 +298,14 @@ def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
 def __edit_srcinfo_file():
     print("Updating .SRCINFO file...")
     subprocess.run(
-        ["docker", "run", "--rm", "-v", f"{os.getcwd()}:/repo", "arch-srcinfo"],
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{os.getcwd()}:/repo",
+            "epulidogil/arch-srcinfo:latest",
+        ],
         check=True,
     )
 
@@ -297,7 +351,7 @@ def __handle_kernel(kernel_name: str, version: str):
     )
     __edit_srcinfo_file()
 
-    __generate_aur_release(kernel_name, version)
+    # __generate_aur_release(kernel_name, version)
 
 
 if __name__ == "__main__":
@@ -307,13 +361,13 @@ if __name__ == "__main__":
 
     if "--matrix" in sys.argv:
         __get_matrix()
+    elif "--build-containers" in sys.argv:
+        __build_containers()
     else:
         subprocess.run(["chmod", "-R", "777", CWD], check=True)
         print(f"Handling update {sys.argv[1]}")
         kernel = sys.argv[1]
         version = sys.argv[2]
-
-        __build_containers()
 
         __prepare_workspace(kernel)
         __handle_kernel(kernel, version)

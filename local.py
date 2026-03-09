@@ -46,6 +46,8 @@ if __name__ == "__main__":
     matrix = json.loads(stdout)
 
     for entry in matrix["include"]:
+        print(f"##################### {entry["kernel"]} #####################")
+        subprocess.run(["chmod", "-R", "777", os.getcwd()], check=True)
         subprocess.run(
             [
                 "sudo",
