@@ -92,8 +92,25 @@ def __get_kernels():
             ) as response:
                 data = response.read()
                 data = json.loads(data.decode("utf-8"))
-                original_vers = data["results"][0]["Version"]
-                original_upd = data["results"][0]["LastModified"]
+                if len(data["results"]) > 0:
+                    original_vers = data["results"][0]["Version"]
+                    original_upd = data["results"][0]["LastModified"]
+                else:
+                    print("  Not found in AUR, checking repository...", file=sys.stderr)
+                    with request.urlopen(
+                        f"https://raw.githubusercontent.com/CachyOS/linux-cachyos/refs/heads/master/{kernel}/PKGBUILD"
+                    ) as response:
+                        major_minor = patch = rel = 0
+                        for line in response.read().decode("utf-8").splitlines():
+                            if line.startswith("_major"):
+                                major_minor = line.split("=")[1]
+                            elif line.startswith("_minor"):
+                                patch = line.split("=")[1]
+                            elif line.startswith("pkgrel"):
+                                rel = line.split("=")[1]
+                        original_vers = f"{major_minor}.{patch}-{rel}"
+                        original_upd = 0
+
                 original_pkgvers, original_pkgrel = original_vers.split("-")
                 print(
                     f"    - Original: {original_vers} ({datetime.fromtimestamp(original_upd).strftime("%a %b %d %H:%M:%S %Y")})",
