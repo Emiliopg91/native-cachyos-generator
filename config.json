@@ -30,7 +30,8 @@
       "_use_llvm_lto": "full",
       "_processor_opt": "native",
       "_use_lto_suffix": "no",
-      "_tcp_bbr3": "yes"
+      "_tcp_bbr3": "yes",
+      "_localmodcfg": "yes"
     }
   }
 }
