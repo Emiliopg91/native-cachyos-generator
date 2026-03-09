@@ -78,9 +78,16 @@ def __check_sources(kernel):
 
 def __get_kernels():
     result = []
+    forced_kernels = []
+    for arg in sys.argv:
+        if arg.startswith("--force"):
+            forced = arg.split("=")[0].split(",")
+            for f in forced:
+                forced_kernels.append(f.strip())
+
     for kernel in KERNELS_CONFIG:
         try:
-            force = "--force" in sys.argv
+            force = kernel in forced_kernels
             original_vers = native_vers = "0.0.0-1"
             original_pkgvers = native_pkgvers = "0.0.0"
             original_pkgrel = native_pkgrel = "1"

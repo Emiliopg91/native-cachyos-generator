@@ -8,7 +8,7 @@ on:
       force_matrix:
         description: "Force update"
         required: false
-        default: "false"
+        default: ""
 
 permissions:
   actions: write
@@ -24,8 +24,8 @@ jobs:
         id: matrix
         run: |
           FORCE_ARG=""
-          if [ "${{ github.event.inputs.force_matrix }}" = "true" ]; then
-            FORCE_ARG="--force"
+          if [ -n "${{ github.event.inputs.force_matrix }}" ]; then
+            FORCE_ARG="--force=${{ github.event.inputs.force_matrix }}"
           fi
 
           MATRIX=$(./main.py --matrix $FORCE_ARG)
