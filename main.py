@@ -351,7 +351,7 @@ def __handle_kernel(kernel_name: str, version: str):
     )
     __edit_srcinfo_file()
 
-    # __generate_aur_release(kernel_name, version)
+    __generate_aur_release(kernel_name, version)
 
 
 if __name__ == "__main__":
