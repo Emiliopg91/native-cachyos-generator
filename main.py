@@ -314,6 +314,19 @@ def __edit_pkgbuild_file(kernel_name, version, new_kernel, pkgbuild):
             pkgbuild_lines[i] = f"pkgrel={pkgrel}"
 
     pkgbuild_content = "\n".join(pkgbuild_lines)
+
+    if KERNELS_CONFIG[kernel_name].get("makedepends"):
+        pkgbuild_content = pkgbuild_content.replace(
+            "makedepends=(",
+            f"makedepends=(\n  {"\n  ".join(KERNELS_CONFIG[kernel_name].get("makedepends"))}",
+        )
+
+    if KERNELS_CONFIG[kernel_name].get("prepare"):
+        pkgbuild_content = pkgbuild_content.replace(
+            "prepare() {",
+            f"prepare() {{{KERNELS_CONFIG[kernel_name].get("prepare")}\n",
+        )
+
     with open(pkgbuild, "w", encoding="utf-8") as f:
         f.write(pkgbuild_content)
 

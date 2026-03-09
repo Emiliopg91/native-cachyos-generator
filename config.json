@@ -24,7 +24,7 @@
     }
   },
   "linux-cachyos-deckify": {
-    "check_src": true,
+    "check_src": false,
     "properties": {
       "_cpusched": "bore",
       "_use_llvm_lto": "full",
@@ -32,6 +32,8 @@
       "_use_lto_suffix": "no",
       "_tcp_bbr3": "yes",
       "_localmodcfg": "yes"
-    }
+    },
+    "makedepends": ["modprobed-db"],
+    "prepare": "modprobed-db\n"
   }
 }
