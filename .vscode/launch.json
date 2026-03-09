@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": "--matrix"
+            "args": "--matrix --force=linux-cachyos-deckify"
         }
     ]
 }

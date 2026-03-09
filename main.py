@@ -81,7 +81,7 @@ def __get_kernels():
     forced_kernels = []
     for arg in sys.argv:
         if arg.startswith("--force"):
-            forced = arg.split("=")[0].split(",")
+            forced = arg.split("=")[1].split(",")
             for f in forced:
                 forced_kernels.append(f.strip())
 
