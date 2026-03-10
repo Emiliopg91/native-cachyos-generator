@@ -27,7 +27,7 @@ def __check_sources(kernel):
     if KERNELS_CONFIG[kernel]["check_src"]:
         print("  Checking source files...", file=sys.stderr)
         with request.urlopen(
-            f"https://aur.archlinux.org/cgit/aur.git/plain/.SRCINFO?h=native-{kernel}"
+            f"https://aur.archlinux.org/cgit/aur.git/plain/.SRCINFO?h={kernel}-native"
         ) as response:
             sources = []
             b2sums = []
@@ -58,7 +58,7 @@ def __check_sources(kernel):
             url = (
                 sources[i]
                 if sources[i].startswith("https://")
-                else f"https://aur.archlinux.org/cgit/aur.git/plain/{sources[i]}?h=native-{kernel}"
+                else f"https://aur.archlinux.org/cgit/aur.git/plain/{sources[i]}?h={kernel}-native"
             )
 
             h = hashlib.blake2b()  # equivalente a b2sum
@@ -125,7 +125,7 @@ def __get_kernels():
                 )
 
             with request.urlopen(
-                f"https://aur.archlinux.org/rpc/?v=5&type=info&arg=native-{kernel}"
+                f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}-native"
             ) as response:
                 data = response.read()
                 data = json.loads(data.decode("utf-8"))
@@ -365,7 +365,7 @@ def __generate_aur_release(kernel_name, version):
         [
             "git",
             "clone",
-            f"ssh://aur@aur.archlinux.org/native-{kernel_name}.git",
+            f"ssh://aur@aur.archlinux.org/{kernel_name}-native.git",
             "aur",
         ],
         check=True,
@@ -395,7 +395,7 @@ def __handle_kernel(kernel_name: str, version: str):
     __edit_pkgbuild_file(
         kernel_name,
         version,
-        f"native-{kernel_name}",
+        f"{kernel_name}-native",
         os.path.join(kernel_dir, "PKGBUILD"),
     )
     __edit_srcinfo_file()
