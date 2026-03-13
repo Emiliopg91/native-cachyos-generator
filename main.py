@@ -95,32 +95,16 @@ def __get_kernels():
             print(f"Looking for {kernel} updates...", file=sys.stderr)
             print("  Getting current versions...", file=sys.stderr)
             with request.urlopen(
-                f"https://aur.archlinux.org/rpc/?v=5&type=info&arg={kernel}"
+                f"https://packages.cachyos.org/package/{KERNELS_CONFIG[kernel]["repo"]}/{KERNELS_CONFIG[kernel]["arch"]}/{kernel}"
             ) as response:
-                data = response.read()
-                data = json.loads(data.decode("utf-8"))
-                if len(data["results"]) > 0:
-                    original_vers = data["results"][0]["Version"]
-                    original_upd = data["results"][0]["LastModified"]
-                else:
-                    print("  Not found in AUR, checking repository...", file=sys.stderr)
-                    with request.urlopen(
-                        f"https://raw.githubusercontent.com/CachyOS/linux-cachyos/refs/heads/master/{kernel}/PKGBUILD"
-                    ) as response:
-                        major_minor = patch = rel = 0
-                        for line in response.read().decode("utf-8").splitlines():
-                            if line.startswith("_major"):
-                                major_minor = line.split("=")[1]
-                            elif line.startswith("_minor"):
-                                patch = line.split("=")[1]
-                            elif line.startswith("pkgrel"):
-                                rel = line.split("=")[1]
-                        original_vers = f"{major_minor}.{patch}-{rel}"
-                        original_upd = 0
+                data = response.read().decode()
+                match = re.search(r"\d+\.\d+\.\d+-\d+", data)
+
+                original_vers = match.group(0)
 
                 original_pkgvers, original_pkgrel = original_vers.split("-")
                 print(
-                    f"    - Original: {original_vers} ({datetime.fromtimestamp(original_upd).strftime("%a %b %d %H:%M:%S %Y")})",
+                    f"    - Original: {original_vers}",
                     file=sys.stderr,
                 )
 
@@ -133,10 +117,9 @@ def __get_kernels():
                     print("    - Native package not available", file=sys.stderr)
                 else:
                     native_vers = data["results"][0]["Version"]
-                    native_upd = data["results"][0]["LastModified"]
                     native_pkgvers, native_pkgrel = native_vers.split("-")
                     print(
-                        f"    - Native:   {native_vers} ({datetime.fromtimestamp(native_upd).strftime("%a %b %d %H:%M:%S %Y")})",
+                        f"    - Native:   {native_vers}",
                         file=sys.stderr,
                     )
 
@@ -146,24 +129,6 @@ def __get_kernels():
             elif float(original_pkgrel) > float(native_pkgrel):
                 print(f"  Update available -> {original_vers}", file=sys.stderr)
                 result.append((kernel, original_vers))
-            elif force or native_upd < original_upd or __check_sources(kernel):
-                pkgrel = native_vers.split("-")[1]
-                if "." in pkgrel:
-                    [major, minor] = pkgrel.split(".")
-                    minor = str(int(minor) + 1)
-                    pkgrel = f"{major}.{minor}"
-                else:
-                    pkgrel = pkgrel + ".1"
-                vers = native_vers.split("-")[0] + "-" + pkgrel
-
-                if force:
-                    print(f"  Update forced -> {vers}", file=sys.stderr)
-                elif native_upd < original_upd:
-                    print(f"  Update available -> {vers}", file=sys.stderr)
-                else:
-                    print(f"  Sources changed -> {vers}", file=sys.stderr)
-
-                result.append((kernel, vers))
             else:
                 print("Up to date", file=sys.stderr)
         except Exception as e:
@@ -359,7 +324,7 @@ def __edit_srcinfo_file():
     )
 
 
-def __generate_aur_release(kernel_name, version):
+def __generate_aur_release(kernel_name, version, files):
     print("Generating AUR release...")
     subprocess.run(
         [
@@ -373,6 +338,9 @@ def __generate_aur_release(kernel_name, version):
     shutil.copy(".SRCINFO", os.path.join("aur", ".SRCINFO"))
     shutil.copy("PKGBUILD", os.path.join("aur", "PKGBUILD"))
     shutil.copy("config", os.path.join("aur", "config"))
+    for file in files:
+        print(f"Adding file {file}")
+        shutil.copy(file, os.path.join("aur", os.path.basename(file)))
 
     prev_cwd = os.getcwd()
     os.chdir(os.path.join(os.getcwd(), "aur"))
@@ -385,8 +353,41 @@ def __generate_aur_release(kernel_name, version):
     os.chdir(prev_cwd)
 
 
-def __handle_kernel(kernel_name: str, version: str):
+def __download_sources():
+    srcinfo = os.path.join(os.getcwd(), ".SRCINFO")
+    pkgbuild = os.path.join(os.getcwd(), "PKGBUILD")
 
+    files = []
+    with open(srcinfo, "r", encoding="utf-8") as f:
+        content = f.readlines()
+    with open(pkgbuild, "r", encoding="utf-8") as f:
+        content2 = f.read()
+
+    for i in range(len(content)):
+        line = content[i].strip()
+        if (
+            line.startswith("source = ")
+            and not line.endswith(".tar.gz")
+            and not line.endswith(".tar.xz")
+        ):
+            url = line.replace("source = ", "")
+            file = url.split("/")[-1]
+            line = f"\tsource = {file}\n"
+            content[i] = line
+            content2 = re.sub(rf'"[^"]*{re.escape(file)}"', f'"{file}"', content2)
+            files.append(os.path.join(os.getcwd(), file))
+
+    with open(srcinfo, "w", encoding="utf-8") as f:
+        f.writelines(content)
+    with open(pkgbuild, "w", encoding="utf-8") as f:
+        f.write(content2)
+
+    print(f"{files}")
+
+    return files
+
+
+def __handle_kernel(kernel_name: str, version: str):
     print(f"Handling kernel {kernel_name} v{version}...")
     kernel_dir = os.path.join(WORKSPACE, kernel_name)
     os.chdir(kernel_dir)
@@ -399,8 +400,9 @@ def __handle_kernel(kernel_name: str, version: str):
         os.path.join(kernel_dir, "PKGBUILD"),
     )
     __edit_srcinfo_file()
+    files = __download_sources()
 
-    __generate_aur_release(kernel_name, version)
+    __generate_aur_release(kernel_name, version, files)
 
 
 if __name__ == "__main__":
@@ -413,7 +415,9 @@ if __name__ == "__main__":
     elif "--build-containers" in sys.argv:
         __build_containers()
     else:
-        subprocess.run(["chmod", "-R", "777", CWD], check=True)
+        # subprocess.run(
+        #    ["chmod", "-R", "777", os.path.join(CWD, "workspace")], check=True
+        # )
         print(f"Handling update {sys.argv[1]}")
         kernel = sys.argv[1]
         version = sys.argv[2]

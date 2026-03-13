@@ -1,18 +1,8 @@
 {
   "linux-cachyos": {
     "check_src": true,
-    "properties": {
-      "_cpusched": "bore",
-      "_use_llvm_lto": "full",
-      "_processor_opt": "native",
-      "_use_lto_suffix": "no",
-      "_per_gov": "yes",
-      "_tcp_bbr3": "yes",
-      "_build_nvidia_open": "yes"
-    }
-  },
-  "linux-cachyos-rc": {
-    "check_src": true,
+    "repo": "cachyos-v3",
+    "arch": "x86_64_v3",
     "properties": {
       "_cpusched": "bore",
       "_use_llvm_lto": "full",
@@ -25,6 +15,8 @@
   },
   "linux-cachyos-deckify": {
     "check_src": false,
+    "repo": "cachyos-znver4",
+    "arch": "x86_64_v4",
     "properties": {
       "_cpusched": "bore",
       "_use_llvm_lto": "full",
